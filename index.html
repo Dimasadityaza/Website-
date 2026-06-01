@@ -493,137 +493,210 @@ const purplePoint = new THREE.PointLight(0x8833ff, 3, 35);
 scene.add(bluePoint, purplePoint);
 
 // ═══════════════════════════════════════════
-//  BIRD CLASS
+//  BIRD CLASS  — organic bezier wing shapes
 // ═══════════════════════════════════════════
+
+// Build a filled wing using THREE.Shape (bezier curves → organic bird wing)
+function buildWingGeo() {
+  const s = new THREE.Shape();
+  // Start at shoulder/root, sweep outward (+X) with chord in Y
+  s.moveTo(0, 0.04);
+  // Leading edge curves forward
+  s.bezierCurveTo(0.38, 0.28,  0.95, 0.36,  1.62, 0.20);
+  // Rounded wing tip
+  s.bezierCurveTo(1.92, 0.10,  2.02, -0.04, 1.88, -0.16);
+  // Trailing edge: scalloped primary feathers
+  s.bezierCurveTo(1.68, -0.26, 1.42, -0.30, 1.18, -0.26);
+  s.quadraticCurveTo(1.04, -0.23, 0.96, -0.28);
+  s.bezierCurveTo(0.82, -0.33, 0.68, -0.28, 0.58, -0.30);
+  s.quadraticCurveTo(0.46, -0.32, 0.38, -0.25);
+  s.bezierCurveTo(0.26, -0.18, 0.10, -0.07, 0, 0.04);
+
+  const geo = new THREE.ShapeGeometry(s, 14);
+  // ShapeGeometry is in XY — rotate to lie flat in XZ plane
+  geo.rotateX(-Math.PI / 2);
+  return geo;
+}
+
+// Smaller secondary covert layer (sits on top of wing for depth)
+function buildCovertGeo() {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0.02);
+  s.bezierCurveTo(0.30, 0.20, 0.78, 0.24, 1.30, 0.11);
+  s.bezierCurveTo(1.58, 0.04, 1.60, -0.06, 1.40, -0.12);
+  s.bezierCurveTo(1.10, -0.20, 0.55, -0.16, 0.10, -0.05);
+  s.quadraticCurveTo(0.04, -0.02, 0, 0.02);
+  const geo = new THREE.ShapeGeometry(s, 10);
+  geo.rotateX(-Math.PI / 2);
+  return geo;
+}
+
+// Fan-shaped tail
+function buildTailGeo() {
+  const s = new THREE.Shape();
+  s.moveTo(-0.14, 0);
+  s.bezierCurveTo(-0.20, -0.12, -0.18, -0.32, -0.08, -0.42);
+  s.bezierCurveTo(-0.03, -0.48, 0.03, -0.48, 0.08, -0.42);
+  s.bezierCurveTo(0.18, -0.32, 0.20, -0.12, 0.14, 0);
+  s.lineTo(-0.14, 0);
+  const geo = new THREE.ShapeGeometry(s, 10);
+  geo.rotateX(-Math.PI / 2);
+  return geo;
+}
+
 class Bird {
   constructor(isHero = false) {
     this.isHero = isHero;
     this.group  = new THREE.Group();
 
-    const s = isHero ? 2.8 : (0.55 + Math.random() * 0.85);
+    const s = isHero ? 2.8 : (0.52 + Math.random() * 0.88);
     this.group.scale.setScalar(s);
 
-    // Palette — kingfisher blue
-    const hue       = 0.57 + Math.random() * 0.04;
-    const bodyCol   = new THREE.Color().setHSL(hue, 0.85, 0.42);
-    const wingCol   = new THREE.Color().setHSL(hue - 0.02, 0.9, 0.35);
-    const bellyCol  = new THREE.Color().setHSL(0.07, 0.95, 0.55);
+    // ── Kingfisher colour palette ──
+    const hue      = 0.575 + Math.random() * 0.03;
+    const backCol  = new THREE.Color().setHSL(hue,       0.90, 0.38); // deep blue back
+    const wingCol  = new THREE.Color().setHSL(hue + 0.02, 0.95, 0.52); // bright electric blue
+    const covertCol= new THREE.Color().setHSL(hue + 0.04, 1.00, 0.62); // lighter highlight
+    const bellyCol = new THREE.Color(0xdd5e18);                          // orange belly
+    const headCol  = new THREE.Color().setHSL(hue - 0.01, 0.88, 0.30); // dark blue head
 
     const phong = (col, shi = 80) => new THREE.MeshPhongMaterial({
-      color: col, shininess: shi,
-      specular: new THREE.Color(0x5599ff),
+      color: col, shininess: shi, specular: new THREE.Color(0x44aaff),
     });
 
-    // Body
-    const bodyGeo = new THREE.SphereGeometry(1, 16, 10);
-    bodyGeo.scale(0.19, 0.12, 0.48);
-    const body = new THREE.Mesh(bodyGeo, phong(bodyCol));
+    // ── BODY — plump rounded torso ──
+    const bodyGeo = new THREE.SphereGeometry(0.22, 16, 12);
+    bodyGeo.scale(1.0, 0.70, 1.80);
+    const body = new THREE.Mesh(bodyGeo, phong(backCol, 100));
     body.castShadow = true;
     this.group.add(body);
 
-    // Belly
-    const bellyGeo = new THREE.SphereGeometry(1, 12, 8);
-    bellyGeo.scale(0.14, 0.075, 0.34);
+    // ── BELLY ── orange underside
+    const bellyGeo = new THREE.SphereGeometry(0.17, 14, 10);
+    bellyGeo.scale(0.88, 0.52, 1.45);
     const belly = new THREE.Mesh(bellyGeo, phong(bellyCol, 40));
-    belly.position.set(0, -0.065, 0.04);
+    belly.position.set(0, -0.085, 0.02);
     this.group.add(belly);
 
-    // Head
-    const headGeo = new THREE.SphereGeometry(0.105, 12, 10);
-    const head = new THREE.Mesh(headGeo, phong(bodyCol, 100));
-    head.position.set(0, 0.045, 0.40);
+    // ── HEAD ── large round head (kingfisher proportion)
+    const headGeo = new THREE.SphereGeometry(0.158, 14, 12);
+    const head = new THREE.Mesh(headGeo, phong(headCol, 110));
+    head.position.set(0, 0.062, 0.355);
     this.group.add(head);
 
-    // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.020, 8, 8);
-    const eyeMat = new THREE.MeshPhongMaterial({ color: 0x080808 });
-    const eyeShineGeo = new THREE.SphereGeometry(0.007, 6, 6);
-    const eyeShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    // Bright blue cap streak on head
+    const capGeo = new THREE.SphereGeometry(0.082, 10, 8);
+    capGeo.scale(0.9, 0.45, 1.15);
+    const cap = new THREE.Mesh(capGeo, phong(wingCol, 70));
+    cap.position.set(0, 0.115, 0.352);
+    this.group.add(cap);
 
-    for (const sx of [0.048, -0.048]) {
+    // ── EYES ──
+    const eyeGeo   = new THREE.SphereGeometry(0.024, 10, 10);
+    const eyeMat   = new THREE.MeshPhongMaterial({ color: 0x0a0a0a });
+    const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const shineGeo = new THREE.SphereGeometry(0.009, 6, 6);
+    for (const sx of [0.072, -0.072]) {
       const eye = new THREE.Mesh(eyeGeo, eyeMat);
-      eye.position.set(sx, 0.055, 0.465);
+      eye.position.set(sx, 0.072, 0.462);
       this.group.add(eye);
-      const shine = new THREE.Mesh(eyeShineGeo, eyeShineMat);
-      shine.position.set(sx + 0.008, 0.064, 0.474);
+      const shine = new THREE.Mesh(shineGeo, shineMat);
+      shine.position.set(sx * 0.85 + 0.012, 0.086, 0.474);
       this.group.add(shine);
     }
 
-    // Beak
-    const beakGeo = new THREE.ConeGeometry(0.026, 0.20, 8);
-    beakGeo.rotateX(-Math.PI / 2);
-    const beak = new THREE.Mesh(beakGeo,
-      new THREE.MeshPhongMaterial({ color: 0xff6600, shininess: 60 }));
-    beak.position.set(0, 0.018, 0.60);
-    this.group.add(beak);
+    // ── BEAK — long dagger (kingfisher style) ──
+    const lowerBeak = new THREE.Mesh(
+      (() => { const g = new THREE.ConeGeometry(0.023, 0.30, 8); g.rotateX(-Math.PI/2); return g; })(),
+      phong(new THREE.Color(0x1a1a1a), 140)
+    );
+    lowerBeak.position.set(0, 0.030, 0.655);
+    this.group.add(lowerBeak);
 
-    // Tail feathers
-    const tailGeo = new THREE.ConeGeometry(0.065, 0.28, 6);
-    tailGeo.rotateX(Math.PI / 2);
-    const tail = new THREE.Mesh(tailGeo, phong(wingCol, 30));
-    tail.position.set(0, 0, -0.54);
-    this.group.add(tail);
+    const upperBeak = new THREE.Mesh(
+      (() => { const g = new THREE.ConeGeometry(0.020, 0.30, 8); g.rotateX(-Math.PI/2); return g; })(),
+      phong(new THREE.Color(0x2a2a2a), 140)
+    );
+    upperBeak.position.set(0, 0.052, 0.655);
+    this.group.add(upperBeak);
 
-    // Wings — low-poly swept shape
-    const wVerts = new Float32Array([
-       0,      0,     0,
-       0.75,   0.05, -0.32,
-       1.55,   0.08, -0.22,
-       2.25,   0.04,  0.00,
-       1.85,   0.00,  0.30,
-       1.05,   0.00,  0.40,
-       0.28,   0.00,  0.36,
-    ]);
-    const wIdx = [0,2,1, 0,3,2, 0,4,3, 0,5,4, 0,6,5];
+    // ── WINGS using organic Shape geometry ──
+    const wingGeo   = buildWingGeo();
+    const covertGeo = buildCovertGeo();
+
     const wingMat = new THREE.MeshPhongMaterial({
-      color: wingCol, side: THREE.DoubleSide, shininess: 45,
+      color: wingCol, side: THREE.DoubleSide, shininess: 60,
+      specular: new THREE.Color(0x55bbff),
+    });
+    const covertMat = new THREE.MeshPhongMaterial({
+      color: covertCol, side: THREE.DoubleSide, shininess: 80,
     });
 
-    const makeWing = (flip) => {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(wVerts.slice(), 3));
-      geo.setIndex(wIdx);
-      geo.computeVertexNormals();
+    const makeWingPivot = (mirror) => {
       const pivot = new THREE.Group();
-      if (flip) pivot.scale.x = -1;
-      pivot.add(new THREE.Mesh(geo, wingMat));
+      pivot.position.set(0, 0, 0.02);
+      if (mirror) pivot.scale.x = -1;
+
+      const wMesh = new THREE.Mesh(wingGeo, wingMat);
+      wMesh.castShadow = true;
+      pivot.add(wMesh);
+
+      const cMesh = new THREE.Mesh(covertGeo, covertMat);
+      cMesh.position.y = 0.018; // slightly above wing surface
+      pivot.add(cMesh);
+
       return pivot;
     };
 
-    this.leftWing  = makeWing(false);
-    this.rightWing = makeWing(true);
-    this.group.add(this.leftWing, this.rightWing);
+    this.leftPivot  = makeWingPivot(false);
+    this.rightPivot = makeWingPivot(true);
+    this.group.add(this.leftPivot, this.rightPivot);
 
-    // Flight params
-    this.flapSpeed  = 3.5 + Math.random() * 3.5;
-    this.flapPhase  = Math.random() * Math.PI * 2;
-    this.pathPhase  = Math.random() * Math.PI * 2;
-    this.radius     = isHero ? 5.5 : (2.5 + Math.random() * 8);
-    this.speed      = isHero ? 0.14 : (0.08 + Math.random() * 0.22);
-    this.baseY      = isHero ? 1.2  : (Math.random() * 8 - 4);
-    this.tilt       = (Math.random() - 0.5) * 0.3;
+    // ── TAIL FAN ──
+    const tailMesh = new THREE.Mesh(buildTailGeo(),
+      new THREE.MeshPhongMaterial({ color: wingCol, side: THREE.DoubleSide, shininess: 40 })
+    );
+    tailMesh.position.set(0, 0, -0.44);
+    this.group.add(tailMesh);
+
+    // ── Flight params ──
+    this.flapSpeed = 3.0 + Math.random() * 3.8;
+    this.flapPhase = Math.random() * Math.PI * 2;
+    this.pathPhase = Math.random() * Math.PI * 2;
+    this.radius    = isHero ? 5.5 : (2.5 + Math.random() * 8);
+    this.speed     = isHero ? 0.13 : (0.07 + Math.random() * 0.22);
+    this.baseY     = isHero ? 1.2  : (Math.random() * 8 - 4);
+    this.bankTilt  = (Math.random() - 0.5) * 0.25;
   }
 
   update(t) {
-    // Wing flap — asymmetric up/down stroke
-    const flap = Math.sin(t * this.flapSpeed + this.flapPhase);
-    const angle = flap * 0.65 + (flap > 0 ? 0 : 0.1);
-    this.leftWing.rotation.z  = angle;
-    this.rightWing.rotation.z = angle;
+    // Asymmetric flap: downstroke faster & deeper than upstroke
+    const raw  = Math.sin(t * this.flapSpeed + this.flapPhase);
+    const flap = raw > 0 ? raw * 0.55 : raw * 0.82;
 
-    // Circular path
+    // Left pivot: positive Z = tip goes down; negative = tip goes up
+    this.leftPivot.rotation.z  =  flap * 0.72;
+    // Right pivot has scale.x=-1 so same sign = mirrored correctly
+    this.rightPivot.rotation.z =  flap * 0.72;
+    // Slight forward sweep on downstroke
+    this.leftPivot.rotation.y  =  flap * 0.12;
+    this.rightPivot.rotation.y = -flap * 0.12;
+
+    // Orbital flight path
     const pt = t * this.speed + this.pathPhase;
-    const x  = Math.cos(pt) * this.radius;
-    const y  = this.baseY + Math.sin(pt * 0.6) * 1.8;
-    const z  = Math.sin(pt) * this.radius;
-    this.group.position.set(x, y, z);
+    this.group.position.set(
+      Math.cos(pt) * this.radius,
+      this.baseY + Math.sin(pt * 0.55) * 1.8,
+      Math.sin(pt) * this.radius
+    );
 
-    // Face travel direction
+    // Face direction of travel
     this.group.rotation.y = Math.atan2(-Math.sin(pt), Math.cos(pt)) + Math.PI * 0.5;
-
-    // Banking + pitch
-    this.group.rotation.z = this.tilt + Math.cos(pt) * 0.18;
-    this.group.rotation.x = -Math.cos(pt * 0.6) * 1.8 * 0.6 * this.speed * 0.5;
+    // Banking into turns
+    this.group.rotation.z = this.bankTilt + Math.cos(pt) * 0.18;
+    // Pitch up/down with altitude change
+    const vy = Math.cos(pt * 0.55) * this.speed;
+    this.group.rotation.x = -vy * 2.8;
   }
 }
 
