@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NestAI — Innovation & Security</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #020818;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+  }
+
+  /* ── Navbar ── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 48px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(5, 10, 30, 0.35);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    pointer-events: all;
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 13.5px;
+    letter-spacing: 0.2px;
+    transition: color 0.25s;
+  }
+
+  .nav-links a:hover { color: #fff; }
+
+  .nav-cta {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    padding: 10px 26px;
+    border-radius: 50px;
+    font-size: 13.5px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.25s, transform 0.2s;
+  }
+
+  .nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  /* ── Hero ── */
+  .hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 48px;
+    position: relative;
+  }
+
+  .hero-content { max-width: 540px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: rgba(59, 130, 246, 0.13);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    border-radius: 50px;
+    padding: 6px 18px;
+    font-size: 12px;
+    color: #7cb9ff;
+    margin-bottom: 26px;
+    letter-spacing: 0.4px;
+  }
+
+  .badge-dot {
+    width: 7px; height: 7px;
+    background: #60a5fa;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.35; transform: scale(0.85); }
+  }
+
+  h1 {
+    font-size: clamp(42px, 5.5vw, 72px);
+    font-weight: 850;
+    line-height: 1.07;
+    margin-bottom: 22px;
+    background: linear-gradient(145deg, #ffffff 0%, #93c5fd 55%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-desc {
+    color: rgba(255,255,255,0.58);
+    font-size: 16px;
+    line-height: 1.75;
+    margin-bottom: 36px;
+    max-width: 440px;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    pointer-events: all;
+  }
+
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    padding: 14px 34px;
+    border-radius: 50px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.25s;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 35px rgba(59, 130, 246, 0.45);
+  }
+
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    pointer-events: all;
+  }
+
+  /* Toggle switch */
+  .toggle {
+    width: 36px; height: 20px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    border-radius: 10px;
+    position: relative;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.2s;
+  }
+
+  /* ── Floating cards ── */
+  .cards {
+    position: absolute;
+    right: 48px;
+    bottom: 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    pointer-events: all;
+  }
+
+  .card {
+    background: rgba(10, 16, 40, 0.55);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 18px 22px;
+    width: 260px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(59, 130, 246, 0.2);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .card-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .card-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.3px;
+  }
+
+  .card-value {
+    font-size: 30px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .chip {
+    background: rgba(59, 130, 246, 0.13);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: #93c5fd;
+  }
+
+  /* ── Avatars ── */
+  .avatars {
+    display: flex;
+    position: absolute;
+    right: 340px;
+    bottom: 130px;
+  }
+
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(10, 16, 40, 0.9);
+    margin-left: -10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .avatar:first-child { margin-left: 0; }
+
+  /* Loading screen */
+  #loader {
+    position: fixed;
+    inset: 0;
+    background: #020818;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    transition: opacity 0.8s ease;
+  }
+
+  .loader-logo {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .loader-bar {
+    width: 200px; height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .loader-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    border-radius: 10px;
+    animation: load 1.4s ease forwards;
+  }
+
+  @keyframes load {
+    from { width: 0; }
+    to   { width: 100%; }
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    .hero { padding: 0 20px; }
+    .cards { display: none; }
+    h1 { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-logo">NestAI</div>
+  <div class="loader-bar"><div class="loader-progress"></div></div>
+</div>
+
+<!-- Three.js canvas -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- UI Overlay -->
+<div class="overlay">
+  <nav>
+    <div class="logo">NestAI</div>
+    <ul class="nav-links">
+      <li><a href="#">Solutions</a></li>
+      <li><a href="#">Platform</a></li>
+      <li><a href="#">Security</a></li>
+      <li><a href="#">Enterprise</a></li>
+      <li><a href="#">Smart Intelligence</a></li>
+    </ul>
+    <button class="nav-cta">Connect</button>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-content">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        AI-Powered Platform
+      </div>
+      <h1>Innovation<br>&amp; Security</h1>
+      <p class="hero-desc">
+        Next-generation AI ensures proactive threat protection —
+        intelligent, adaptive, always ahead of the curve.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Our Solutions
+        </button>
+        <div class="toggle-wrap">
+          <span class="toggle"></span>
+          AI Protection
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">🛡️</div>
+          <div class="card-label">Integrated AI Agent</div>
+        </div>
+        <div class="card-value">42%</div>
+        <div class="chips">
+          <span class="chip">AI Ensures Protection</span>
+          <span class="chip">Active</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">⚡</div>
+          <div class="card-label">Threat Response Time</div>
+        </div>
+        <div class="card-value">0.3s</div>
+        <div class="chips">
+          <span class="chip">Real-time</span>
+          <span class="chip">Neural Engine</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avatars -->
+    <div class="avatars">
+      <div class="avatar">A</div>
+      <div class="avatar">B</div>
+      <div class="avatar">C</div>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js r134 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════
+//  SCENE SETUP
+// ═══════════════════════════════════════════
+const canvas   = document.getElementById('bg-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene  = new THREE.Scene();
+scene.fog    = new THREE.FogExp2(0x020c22, 0.018);
+
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(0, 3, 18);
+camera.lookAt(0, 1, 0);
+
+// ── Background gradient quad ──
+const bgMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(2, 2),
+  new THREE.ShaderMaterial({
+    uniforms: {
+      topColor:    { value: new THREE.Color(0x020818) },
+      bottomColor: { value: new THREE.Color(0x071035) },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+      varying vec2 vUv;
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      void main() {
+        vec3 col = mix(bottomColor, topColor, vUv.y);
+        // subtle radial vignette
+        float d = length(vUv - 0.5) * 1.6;
+        col = mix(col, vec3(0.0), d * d * 0.35);
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+    depthWrite: false,
+  })
+);
+bgMesh.renderOrder = -1;
+scene.add(bgMesh);
+
+// ── Lights ──
+scene.add(new THREE.AmbientLight(0x223366, 2.0));
+
+const sunLight = new THREE.DirectionalLight(0xddeeff, 2.5);
+sunLight.position.set(12, 20, 8);
+sunLight.castShadow = true;
+scene.add(sunLight);
+
+const bluePoint   = new THREE.PointLight(0x3366ff, 4, 40);
+const purplePoint = new THREE.PointLight(0x8833ff, 3, 35);
+scene.add(bluePoint, purplePoint);
+
+// ═══════════════════════════════════════════
+//  BIRD CLASS
+// ═══════════════════════════════════════════
+class Bird {
+  constructor(isHero = false) {
+    this.isHero = isHero;
+    this.group  = new THREE.Group();
+
+    const s = isHero ? 2.8 : (0.55 + Math.random() * 0.85);
+    this.group.scale.setScalar(s);
+
+    // Palette — kingfisher blue
+    const hue       = 0.57 + Math.random() * 0.04;
+    const bodyCol   = new THREE.Color().setHSL(hue, 0.85, 0.42);
+    const wingCol   = new THREE.Color().setHSL(hue - 0.02, 0.9, 0.35);
+    const bellyCol  = new THREE.Color().setHSL(0.07, 0.95, 0.55);
+
+    const phong = (col, shi = 80) => new THREE.MeshPhongMaterial({
+      color: col, shininess: shi,
+      specular: new THREE.Color(0x5599ff),
+    });
+
+    // Body
+    const bodyGeo = new THREE.SphereGeometry(1, 16, 10);
+    bodyGeo.scale(0.19, 0.12, 0.48);
+    const body = new THREE.Mesh(bodyGeo, phong(bodyCol));
+    body.castShadow = true;
+    this.group.add(body);
+
+    // Belly
+    const bellyGeo = new THREE.SphereGeometry(1, 12, 8);
+    bellyGeo.scale(0.14, 0.075, 0.34);
+    const belly = new THREE.Mesh(bellyGeo, phong(bellyCol, 40));
+    belly.position.set(0, -0.065, 0.04);
+    this.group.add(belly);
+
+    // Head
+    const headGeo = new THREE.SphereGeometry(0.105, 12, 10);
+    const head = new THREE.Mesh(headGeo, phong(bodyCol, 100));
+    head.position.set(0, 0.045, 0.40);
+    this.group.add(head);
+
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.020, 8, 8);
+    const eyeMat = new THREE.MeshPhongMaterial({ color: 0x080808 });
+    const eyeShineGeo = new THREE.SphereGeometry(0.007, 6, 6);
+    const eyeShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    for (const sx of [0.048, -0.048]) {
+      const eye = new THREE.Mesh(eyeGeo, eyeMat);
+      eye.position.set(sx, 0.055, 0.465);
+      this.group.add(eye);
+      const shine = new THREE.Mesh(eyeShineGeo, eyeShineMat);
+      shine.position.set(sx + 0.008, 0.064, 0.474);
+      this.group.add(shine);
+    }
+
+    // Beak
+    const beakGeo = new THREE.ConeGeometry(0.026, 0.20, 8);
+    beakGeo.rotateX(-Math.PI / 2);
+    const beak = new THREE.Mesh(beakGeo,
+      new THREE.MeshPhongMaterial({ color: 0xff6600, shininess: 60 }));
+    beak.position.set(0, 0.018, 0.60);
+    this.group.add(beak);
+
+    // Tail feathers
+    const tailGeo = new THREE.ConeGeometry(0.065, 0.28, 6);
+    tailGeo.rotateX(Math.PI / 2);
+    const tail = new THREE.Mesh(tailGeo, phong(wingCol, 30));
+    tail.position.set(0, 0, -0.54);
+    this.group.add(tail);
+
+    // Wings — low-poly swept shape
+    const wVerts = new Float32Array([
+       0,      0,     0,
+       0.75,   0.05, -0.32,
+       1.55,   0.08, -0.22,
+       2.25,   0.04,  0.00,
+       1.85,   0.00,  0.30,
+       1.05,   0.00,  0.40,
+       0.28,   0.00,  0.36,
+    ]);
+    const wIdx = [0,2,1, 0,3,2, 0,4,3, 0,5,4, 0,6,5];
+    const wingMat = new THREE.MeshPhongMaterial({
+      color: wingCol, side: THREE.DoubleSide, shininess: 45,
+    });
+
+    const makeWing = (flip) => {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(wVerts.slice(), 3));
+      geo.setIndex(wIdx);
+      geo.computeVertexNormals();
+      const pivot = new THREE.Group();
+      if (flip) pivot.scale.x = -1;
+      pivot.add(new THREE.Mesh(geo, wingMat));
+      return pivot;
+    };
+
+    this.leftWing  = makeWing(false);
+    this.rightWing = makeWing(true);
+    this.group.add(this.leftWing, this.rightWing);
+
+    // Flight params
+    this.flapSpeed  = 3.5 + Math.random() * 3.5;
+    this.flapPhase  = Math.random() * Math.PI * 2;
+    this.pathPhase  = Math.random() * Math.PI * 2;
+    this.radius     = isHero ? 5.5 : (2.5 + Math.random() * 8);
+    this.speed      = isHero ? 0.14 : (0.08 + Math.random() * 0.22);
+    this.baseY      = isHero ? 1.2  : (Math.random() * 8 - 4);
+    this.tilt       = (Math.random() - 0.5) * 0.3;
+  }
+
+  update(t) {
+    // Wing flap — asymmetric up/down stroke
+    const flap = Math.sin(t * this.flapSpeed + this.flapPhase);
+    const angle = flap * 0.65 + (flap > 0 ? 0 : 0.1);
+    this.leftWing.rotation.z  = angle;
+    this.rightWing.rotation.z = angle;
+
+    // Circular path
+    const pt = t * this.speed + this.pathPhase;
+    const x  = Math.cos(pt) * this.radius;
+    const y  = this.baseY + Math.sin(pt * 0.6) * 1.8;
+    const z  = Math.sin(pt) * this.radius;
+    this.group.position.set(x, y, z);
+
+    // Face travel direction
+    this.group.rotation.y = Math.atan2(-Math.sin(pt), Math.cos(pt)) + Math.PI * 0.5;
+
+    // Banking + pitch
+    this.group.rotation.z = this.tilt + Math.cos(pt) * 0.18;
+    this.group.rotation.x = -Math.cos(pt * 0.6) * 1.8 * 0.6 * this.speed * 0.5;
+  }
+}
+
+// Create hero bird + flock
+const heroBird = new Bird(true);
+scene.add(heroBird.group);
+
+const flock = Array.from({ length: 14 }, () => {
+  const b = new Bird(false);
+  scene.add(b.group);
+  return b;
+});
+
+// ═══════════════════════════════════════════
+//  ATMOSPHERIC PARTICLES
+// ═══════════════════════════════════════════
+(function addParticles() {
+  const N    = 300;
+  const geo  = new THREE.BufferGeometry();
+  const pos  = new Float32Array(N * 3);
+  const cols = new Float32Array(N * 3);
+
+  for (let i = 0; i < N; i++) {
+    pos[i*3]   = (Math.random() - 0.5) * 60;
+    pos[i*3+1] = (Math.random() - 0.5) * 35;
+    pos[i*3+2] = (Math.random() - 0.5) * 60;
+    const c = new THREE.Color().setHSL(0.55 + Math.random() * 0.1, 0.9, 0.6);
+    cols[i*3] = c.r; cols[i*3+1] = c.g; cols[i*3+2] = c.b;
+  }
+
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(cols, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.06, vertexColors: true, transparent: true, opacity: 0.5,
+  })));
+})();
+
+// ═══════════════════════════════════════════
+//  GROUND PLANE (reflection hint)
+// ═══════════════════════════════════════════
+const groundMat = new THREE.MeshPhongMaterial({
+  color: 0x071035, transparent: true, opacity: 0.4,
+  shininess: 120, specular: new THREE.Color(0x2244aa),
+});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -8;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ═══════════════════════════════════════════
+//  ANIMATION LOOP
+// ═══════════════════════════════════════════
+const clock = new THREE.Clock();
+let camAngle = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  heroBird.update(t);
+  flock.forEach(b => b.update(t));
+
+  // Slow camera drift
+  camAngle = t * 0.04;
+  camera.position.x = Math.sin(camAngle) * 4;
+  camera.position.y = 3 + Math.sin(t * 0.025) * 0.8;
+  camera.lookAt(0, 1, 0);
+
+  // Orbit lights
+  bluePoint.position.set(
+    Math.sin(t * 0.45) * 10, 6,
+    Math.cos(t * 0.45) * 10
+  );
+  purplePoint.position.set(
+    Math.cos(t * 0.35) * 8, -2,
+    Math.sin(t * 0.35) * 8
+  );
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// ── Hide loader after 1.5s ──
+setTimeout(() => {
+  const loader = document.getElementById('loader');
+  loader.style.opacity = '0';
+  setTimeout(() => loader.remove(), 800);
+}, 1500);
+
+// ── Resize ──
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
+</body>
+</html>
