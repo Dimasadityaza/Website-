@@ -9,7 +9,7 @@
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #020818;
+    background: #7ab0cc;
     color: white;
     overflow: hidden;
     height: 100vh;
@@ -461,169 +461,143 @@ renderer.outputColorSpace   = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 scene.fog   = new THREE.FogExp2(0x020c22, 0.016);
 
-// Narrower FOV = more cinematic / telephoto feel
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 500);
-camera.position.set(0, 2, 10);
-camera.lookAt(0, 1, 0);
+// ── Telephoto cinematic camera — close to subject ──
+const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.1, 300);
+camera.position.set(0, 0.5, 5);
+camera.lookAt(0, 0.5, 0);
 
-// ── Background ──
-scene.background = new THREE.Color(0x010c1e);
+// ── Sky background: soft blue like the reference ──
+scene.background = new THREE.Color(0x8ab8d0);
+scene.fog = new THREE.Fog(0xb8d8ea, 18, 70); // soft blue fog, not dark
 
-// ── Post-processing: Bloom ──
+// ── Post-processing ──
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
+// Subtle bloom — enhances feather highlights
 const bloom = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.55,  // strength
-  0.80,  // radius
-  0.15   // threshold – lower = more objects glow
+  0.30, 0.70, 0.55
 );
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// ── 3-point cinematic lighting ──
-scene.add(new THREE.AmbientLight(0x223355, 3.5));
+// ── Sunlight-style lighting (matches reference: bright day) ──
+scene.add(new THREE.AmbientLight(0xddeeff, 3.5));
 
-// Key light: upper-front-right, warm — defines shape/depth
-const keyLight = new THREE.DirectionalLight(0xfff0dd, 7);
-keyLight.position.set(6, 10, 8);
-scene.add(keyLight);
+// Strong warm sun from upper-right
+const sun = new THREE.DirectionalLight(0xfffae8, 8);
+sun.position.set(8, 14, 6);
+scene.add(sun);
 
-// Fill light: blue, lower-left — soft shadow fill
-const fillLight = new THREE.PointLight(0x3377ff, 10, 35);
-fillLight.position.set(-6, -2, 6);
-scene.add(fillLight);
+// Soft blue sky fill from above
+const skyFill = new THREE.DirectionalLight(0xaaccff, 2.5);
+skyFill.position.set(-4, 8, -4);
+scene.add(skyFill);
 
-// Rim light: warm orange from behind — separates bird from bg
-const rimLight = new THREE.DirectionalLight(0xff6622, 3.5);
-rimLight.position.set(-8, 4, -12);
+// Warm rim from slightly behind — gives feather edge glow
+const rimLight = new THREE.DirectionalLight(0xffaa55, 2.0);
+rimLight.position.set(-6, 2, -10);
 scene.add(rimLight);
 
-// Dynamic purple accent
-const purplePoint = new THREE.PointLight(0x9933ff, 7, 45);
-scene.add(purplePoint);
-
-// ── Atmospheric particles ──
-{
-  const N = 350, geo = new THREE.BufferGeometry();
-  const pos = new Float32Array(N*3), col = new Float32Array(N*3);
-  for (let i = 0; i < N; i++) {
-    pos[i*3]   = (Math.random()-0.5)*80;
-    pos[i*3+1] = (Math.random()-0.5)*45;
-    pos[i*3+2] = (Math.random()-0.5)*80;
-    const c = new THREE.Color().setHSL(0.55+Math.random()*0.12, 0.9, 0.65);
-    col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
-  }
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
-  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
-    size: 0.08, vertexColors: true, transparent: true, opacity: 0.5,
-  })));
-}
-
-// ── Ground reflection ──
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(200, 200),
-  new THREE.MeshPhongMaterial({
-    color: 0x040e22, transparent: true, opacity: 0.5,
-    shininess: 160, specular: new THREE.Color(0x1144bb),
-  })
-);
-ground.rotation.x = -Math.PI / 2;
-ground.position.y = -12;
-scene.add(ground);
+// Moving accent
+const accentLight = new THREE.PointLight(0x88ccff, 4, 30);
+scene.add(accentLight);
 
 // ═══════════════════════════════════════════
-//  REAL BIRD MODELS via GLTFLoader
-//  Architecture: flightGroup > modelWrapper > model
-//  flightGroup  → flight path rotation (direction, bank, pitch)
-//  modelWrapper → static per-model orientation fix
+//  REAL BIRD MODELS
+//  flightGroup (direction/bank/pitch)
+//    └─ wrapper (per-model orientation fix)
+//         └─ model (GLB)
 // ═══════════════════════════════════════════
-const loader = new GLTFLoader();
-const mixers = [];
-const birds  = [];
+const loader  = new GLTFLoader();
+const mixers  = [];
+const birds   = [];
 
 const MODELS = [
   {
     url:       'https://threejs.org/examples/models/gltf/Parrot.glb',
-    baseScale: 0.013,
-    count:     7,
-    fix:       [0, 0, 0],              // Parrot faces correctly by default
+    baseScale: 0.014,
+    count:     8,
+    fix:       [0, 0, 0],
+    heroColor: 0x1a6bcc,   // kingfisher blue for hero
   },
   {
     url:       'https://threejs.org/examples/models/gltf/Flamingo.glb',
     baseScale: 0.015,
     count:     5,
-    fix:       [0, 0, Math.PI],        // Flamingo was upside-down — flip 180° on Z
+    fix:       [0, 0, Math.PI],
+    heroColor: null,
   },
   {
     url:       'https://threejs.org/examples/models/gltf/Stork.glb',
     baseScale: 0.013,
-    count:     3,
-    fix:       [0, Math.PI, 0],        // Stork faces opposite direction — flip on Y
+    count:     2,
+    fix:       [0, Math.PI, 0],
+    heroColor: null,
   },
 ];
 
-let loadedCount = 0;
+let loadedCount  = 0;
 const totalBirds = MODELS.reduce((s, m) => s + m.count, 0);
-let heroAssigned  = false;
+let heroAssigned = false;
 
 function spawnBird(gltf, cfg, forceHero) {
   const isHero = forceHero && !heroAssigned;
   if (isHero) heroAssigned = true;
 
-  // ── Flight group: handles world-space movement ──
   const flightGroup = new THREE.Group();
-
-  // ── Model wrapper: static orientation correction ──
-  const wrapper = new THREE.Group();
+  const wrapper     = new THREE.Group();
   wrapper.rotation.set(...cfg.fix);
 
-  // ── Clone model ──
   const model = gltf.scene.clone(true);
   model.traverse(child => {
     if (!child.isMesh) return;
-    child.castShadow    = true;
-    child.receiveShadow = false;
+    child.castShadow = true;
     if (child.material) {
       child.material = child.material.clone();
-      // Slight emissive so bloom picks up bright parts
-      child.material.emissiveIntensity = 0.25;
-      if (!child.material.emissive) child.material.emissive = new THREE.Color(0);
-      child.material.emissive.setScalar(0.08);
+      if (isHero && cfg.heroColor) {
+        // Tint hero bird to kingfisher blue
+        child.material.color.set(cfg.heroColor);
+        child.material.emissive = new THREE.Color(0x0a3366);
+        child.material.emissiveIntensity = 0.18;
+      } else {
+        // Flock: slight sky-tinted emissive
+        if (child.material.emissive) {
+          child.material.emissive.set(0x334455);
+          child.material.emissiveIntensity = 0.08;
+        }
+      }
     }
   });
 
   wrapper.add(model);
   flightGroup.add(wrapper);
 
-  // Hero bird is 5× larger, orbits close; flock varies in size/distance
+  // Hero: VERY large (fills screen), extremely close orbit
+  // Flock: normal size, far away
   const scale = isHero
-    ? cfg.baseScale * 5.5
-    : cfg.baseScale * (0.45 + Math.random() * 1.1);
+    ? cfg.baseScale * 9.0
+    : cfg.baseScale * (0.4 + Math.random() * 0.9);
   flightGroup.scale.setScalar(scale);
 
-  // ── AnimationMixer drives built-in wing animation ──
   const mixer = new THREE.AnimationMixer(model);
   if (gltf.animations?.length > 0) {
     const clip   = gltf.animations[0];
     const action = mixer.clipAction(clip);
-    action.timeScale = 0.8 + Math.random() * 0.6;
+    action.timeScale = isHero ? 1.2 : (0.7 + Math.random() * 0.7);
     action.play();
-    mixer.setTime(Math.random() * clip.duration); // desync birds
+    mixer.setTime(Math.random() * clip.duration);
   }
   mixers.push(mixer);
 
   scene.add(flightGroup);
   birds.push({
-    flightGroup,
-    mixer,
-    isHero,
-    speed:  isHero ? 0.10 : (0.05 + Math.random() * 0.20),
-    radius: isHero ? 2.8  : (5 + Math.random() * 11),
+    flightGroup, mixer, isHero,
+    speed:  isHero ? 0.09 : (0.04 + Math.random() * 0.18),
+    radius: isHero ? 1.8  : (6 + Math.random() * 14),
     phase:  Math.random() * Math.PI * 2,
-    baseY:  isHero ? 1.0  : (Math.random() * 10 - 5),
-    tilt:   (Math.random() - 0.5) * 0.28,
+    baseY:  isHero ? 0.4  : (Math.random() * 10 - 5),
+    tilt:   (Math.random() - 0.5) * 0.25,
   });
 
   loadedCount++;
@@ -638,22 +612,17 @@ function hideLoader() {
 }
 
 MODELS.forEach((cfg, mi) => {
-  loader.load(
-    cfg.url,
+  loader.load(cfg.url,
     gltf => {
       for (let i = 0; i < cfg.count; i++) {
-        spawnBird(gltf, cfg, mi === 0 && i === 0); // first parrot = hero
+        spawnBird(gltf, cfg, mi === 0 && i === 0);
       }
     },
     null,
-    () => {
-      loadedCount += cfg.count;
-      if (loadedCount >= totalBirds) hideLoader();
-    }
+    () => { loadedCount += cfg.count; if (loadedCount >= totalBirds) hideLoader(); }
   );
 });
-
-setTimeout(hideLoader, 7000); // safety fallback
+setTimeout(hideLoader, 8000);
 
 // ═══════════════════════════════════════════
 //  ANIMATION LOOP
@@ -663,20 +632,14 @@ let prevT = 0;
 
 function updateBird(b, t) {
   const pt = t * b.speed + b.phase;
-
-  // Orbital position
   b.flightGroup.position.set(
     Math.cos(pt) * b.radius,
-    b.baseY + Math.sin(pt * 0.55) * (b.isHero ? 1.2 : 2.2),
+    b.baseY + Math.sin(pt * 0.55) * (b.isHero ? 0.8 : 2.0),
     Math.sin(pt) * b.radius
   );
-
-  // Face direction of travel (flightGroup only — wrapper keeps orientation fix)
   b.flightGroup.rotation.y = Math.atan2(-Math.sin(pt), Math.cos(pt)) + Math.PI * 0.5;
-  // Banking
-  b.flightGroup.rotation.z = b.tilt + Math.cos(pt) * 0.18;
-  // Pitch up/down with altitude changes
-  b.flightGroup.rotation.x = -Math.cos(pt * 0.55) * b.speed * 2.2;
+  b.flightGroup.rotation.z = b.tilt + Math.cos(pt) * 0.16;
+  b.flightGroup.rotation.x = -Math.cos(pt * 0.55) * b.speed * 2.0;
 }
 
 function animate() {
@@ -688,14 +651,12 @@ function animate() {
   mixers.forEach(m => m.update(delta));
   birds.forEach(b => updateBird(b, t));
 
-  // Slow cinematic camera orbit — pans left/right with slight tilt
-  camera.position.x = Math.sin(t * 0.035) * 3.5;
-  camera.position.y = 2 + Math.sin(t * 0.022) * 0.8;
-  camera.lookAt(0, 1, 0);
+  // Slow cinematic camera drift — subtle parallax
+  camera.position.x = Math.sin(t * 0.030) * 2.0;
+  camera.position.y = 0.5 + Math.sin(t * 0.018) * 0.4;
+  camera.lookAt(0, 0.5, 0);
 
-  // Orbit dynamic lights
-  fillLight.position.set(Math.sin(t * 0.40) * 9,  -2, Math.cos(t * 0.40) * 9);
-  purplePoint.position.set(Math.cos(t * 0.28) * 11, -3, Math.sin(t * 0.28) * 11);
+  accentLight.position.set(Math.sin(t * 0.38) * 8, 3, Math.cos(t * 0.38) * 8);
 
   composer.render();
 }
